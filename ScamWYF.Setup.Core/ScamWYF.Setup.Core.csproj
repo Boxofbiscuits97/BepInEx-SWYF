@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    The setup logic, as a library, so the CLI and Switchboard run the same code rather than each
-    driving PowerShell. Cross-platform on purpose: the Windows-only PowerShell scripts it replaces
-    could not run on Linux, and Switchboard's WPF host cannot either.
+    Setup and game-repair logic live in one library so the CLI, Switchboard and preloader share the
+    same implementation rather than each driving PowerShell. Cross-platform on purpose: the
+    Windows-only PowerShell scripts it replaces could not run on Linux, and Switchboard's WPF host
+    cannot either.
 
     Mono.Cecil is a PackageReference rather than a vendored dll here. The old tools loaded it out of
     the game's BepInEx\core at run time, which meant the patching steps could only run after BepInEx
@@ -12,7 +13,7 @@
   -->
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net35</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -23,31 +24,32 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+    <PackageReference Include="Mono.Cecil" Version="0.10.4" />
   </ItemGroup>
 
   <!--
-    The vendored binaries, compiled in under a fixed `payload/` prefix so a published build is one
-    file with no `Setup\` folder beside it. LogicalName is explicit for every one of them because the
-    names are the contract SetupPayload reads back, and because `.doorstop_version` has no stem for
-    the default naming rule to use.
+    The payload is compiled in under a fixed `payload/` prefix. LogicalName is explicit for every
+    resource because the names are the contract SetupPayload reads back, and because
+    `.doorstop_version` has no stem for the default naming rule to use. Doorstop's native files are
+    downloaded by the packaging task, so they are included when present but are not required for a
+    normal project build.
 
     They are embedded in every configuration, not only Release, so a debug build and the tests
     exercise the same payload path a user gets.
   -->
   <ItemGroup>
-    <EmbeddedResource Include="../../vendor/corlib/mscorlib.dll" LogicalName="payload/corlib/mscorlib.dll" />
-    <EmbeddedResource Include="../../vendor/corlib/System.dll" LogicalName="payload/corlib/System.dll" />
-    <EmbeddedResource Include="../../vendor/corlib/System.Core.dll" LogicalName="payload/corlib/System.Core.dll" />
-    <EmbeddedResource Include="../../vendor/corlib/System.Configuration.dll" LogicalName="payload/corlib/System.Configuration.dll" />
-    <EmbeddedResource Include="../../vendor/corlib/System.Numerics.dll" LogicalName="payload/corlib/System.Numerics.dll" />
-    <EmbeddedResource Include="../../vendor/corlib/System.Security.dll" LogicalName="payload/corlib/System.Security.dll" />
-    <EmbeddedResource Include="../../vendor/corlib/System.Xml.dll" LogicalName="payload/corlib/System.Xml.dll" />
-    <EmbeddedResource Include="../../vendor/corlib/Mono.Security.dll" LogicalName="payload/corlib/Mono.Security.dll" />
+    <EmbeddedResource Include="..\extralibs\mscorlib.dll" LogicalName="payload/corlib/mscorlib.dll" />
+    <EmbeddedResource Include="..\extralibs\System.dll" LogicalName="payload/corlib/System.dll" />
+    <EmbeddedResource Include="..\extralibs\System.Core.dll" LogicalName="payload/corlib/System.Core.dll" />
+    <EmbeddedResource Include="..\extralibs\System.Configuration.dll" LogicalName="payload/corlib/System.Configuration.dll" />
+    <EmbeddedResource Include="..\extralibs\System.Numerics.dll" LogicalName="payload/corlib/System.Numerics.dll" />
+    <EmbeddedResource Include="..\extralibs\System.Security.dll" LogicalName="payload/corlib/System.Security.dll" />
+    <EmbeddedResource Include="..\extralibs\System.Xml.dll" LogicalName="payload/corlib/System.Xml.dll" />
+    <EmbeddedResource Include="..\extralibs\Mono.Security.dll" LogicalName="payload/corlib/Mono.Security.dll" />
 
-    <EmbeddedResource Include="../../vendor/doorstop/winhttp.dll" LogicalName="payload/doorstop/winhttp.dll" />
-    <EmbeddedResource Include="../../vendor/doorstop/.doorstop_version" LogicalName="payload/doorstop/.doorstop_version" />
-    <EmbeddedResource Include="../../vendor/doorstop/doorstop_config.ini" LogicalName="payload/doorstop/doorstop_config.ini" />
+    <EmbeddedResource Include="..\bin\doorstop\win\x64\winhttp.dll" LogicalName="payload/doorstop/winhttp.dll" Condition="Exists('..\bin\doorstop\win\x64\winhttp.dll')" />
+    <EmbeddedResource Include="..\bin\doorstop\win\x64\.doorstop_version" LogicalName="payload/doorstop/.doorstop_version" Condition="Exists('..\bin\doorstop\win\x64\.doorstop_version')" />
+    <EmbeddedResource Include="..\doorstop\doorstop_config.ini" LogicalName="payload/doorstop/doorstop_config.ini" />
   </ItemGroup>
 
 </Project>

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 namespace ScamWYF.Setup
@@ -23,17 +22,17 @@ namespace ScamWYF.Setup
         public const int GameAppId = 4954910;
 
         private static readonly StringComparer PathComparer =
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            IsWindows
                 ? StringComparer.OrdinalIgnoreCase
                 : StringComparer.Ordinal;
 
         private SteamEnvironment(
-            IReadOnlyList<string> steamRoots,
-            IReadOnlyList<string> libraries,
+            IList<string> steamRoots,
+            IList<string> libraries,
             string primarySteamRoot,
             string compatDataDir,
             string prefixDir,
-            IReadOnlyList<string> protonBuilds)
+            IList<string> protonBuilds)
         {
             SteamRoots = steamRoots;
             Libraries = libraries;
@@ -44,10 +43,10 @@ namespace ScamWYF.Setup
         }
 
         /// <summary>Steam root folders that exist, most likely first.</summary>
-        public IReadOnlyList<string> SteamRoots { get; }
+        public IList<string> SteamRoots { get; }
 
         /// <summary>Every `<library>/steamapps/common` folder, deduplicated.</summary>
-        public IReadOnlyList<string> Libraries { get; }
+        public IList<string> Libraries { get; }
 
         public string PrimarySteamRoot { get; }
 
@@ -58,14 +57,13 @@ namespace ScamWYF.Setup
         public string PrefixDir { get; }
 
         /// <summary>Proton builds found under the libraries, newest-looking names first.</summary>
-        public IReadOnlyList<string> ProtonBuilds { get; }
+        public IList<string> ProtonBuilds { get; }
 
         public static SteamEnvironment Detect()
         {
-            // ~/.steam/steam and ~/.steam/root are symlinks into ~/.local/share/Steam, so resolving
-            // each root before deduplicating is what keeps one Steam from being listed three times.
+            // Resolve Steam symlinks before deduplicating when the runtime supports it.
             var roots = CandidateSteamRoots()
-                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Where(r => !IsBlank(r))
                 .Select(Normalize)
                 .Where(Directory.Exists)
                 .Select(Canonicalize)
@@ -75,19 +73,19 @@ namespace ScamWYF.Setup
             var libraries = new List<string>();
             foreach (var root in roots)
             {
-                AddLibrary(libraries, Path.Combine(root, "steamapps", "common"));
+                AddLibrary(libraries, Combine(root, "steamapps", "common"));
 
-                var vdf = Path.Combine(root, "steamapps", "libraryfolders.vdf");
+                var vdf = Combine(root, "steamapps", "libraryfolders.vdf");
                 foreach (var library in ReadLibraryFolders(vdf))
                 {
-                    AddLibrary(libraries, Path.Combine(library, "steamapps", "common"));
+                    AddLibrary(libraries, Combine(library, "steamapps", "common"));
                 }
             }
 
             // Last resorts, Windows-only. Kept for the machine where nothing above resolved, exactly
             // as the Windows script did. Guarded on the platform because a `C:\...` path on Linux is
             // not a location, it is a string that will never exist.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (IsWindows)
             {
                 AddLibrary(libraries, @"C:\Program Files (x86)\Steam\steamapps\common");
                 AddLibrary(libraries, @"D:\SteamLibrary\steamapps\common");
@@ -108,9 +106,9 @@ namespace ScamWYF.Setup
 
         private static IEnumerable<string> CandidateSteamRoots()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (IsWindows)
             {
-                yield return Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam");
+                yield return Combine(Environment.GetEnvironmentVariable("ProgramFiles(x86)"), "Steam");
                 yield return Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Steam");
                 yield return Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA"), "Steam");
                 yield break;
@@ -125,7 +123,7 @@ namespace ScamWYF.Setup
             yield return Combine(home, ".steam", "root");
             yield return Combine(home, ".local", "share", "Steam");
             yield return Combine(home, ".local", "share", "steam");
-            if (!string.IsNullOrWhiteSpace(xdgData)) yield return Path.Combine(xdgData, "Steam");
+            if (!IsBlank(xdgData)) yield return Path.Combine(xdgData, "Steam");
 
             // Flatpak and Snap keep their own HOME, and are common on Steam Deck-adjacent desktops.
             yield return Combine(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam");
@@ -157,19 +155,19 @@ namespace ScamWYF.Setup
             foreach (Match match in Regex.Matches(text, "\"path\"\\s+\"([^\"]+)\""))
             {
                 var library = match.Groups[1].Value.Replace("\\\\", "\\");
-                if (!string.IsNullOrWhiteSpace(library)) yield return library;
+                if (!IsBlank(library)) yield return library;
             }
         }
 
-        private static string FindCompatData(IReadOnlyList<string> roots, IReadOnlyList<string> libraries)
+        private static string FindCompatData(IList<string> roots, IList<string> libraries)
         {
             var steamApps = new List<string>();
             foreach (var root in roots) steamApps.Add(Path.Combine(root, "steamapps"));
             foreach (var common in libraries) steamApps.Add(Path.GetDirectoryName(common));
 
             var candidates = steamApps
-                .Where(dir => !string.IsNullOrWhiteSpace(dir))
-                .Select(dir => Path.Combine(dir, "compatdata", GameAppId.ToString()))
+                .Where(dir => !IsBlank(dir))
+                .Select(dir => Combine(dir, "compatdata", GameAppId.ToString()))
                 .Distinct(PathComparer)
                 .ToList();
 
@@ -181,31 +179,31 @@ namespace ScamWYF.Setup
 
         private static void AddLibrary(ICollection<string> libraries, string path)
         {
-            if (string.IsNullOrWhiteSpace(path)) return;
+            if (IsBlank(path)) return;
             var full = Normalize(path);
             if (!libraries.Contains(full, PathComparer)) libraries.Add(full);
         }
 
         private static IEnumerable<string> SafeDirectories(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return Array.Empty<string>();
+            if (IsBlank(path) || !Directory.Exists(path)) return new string[0];
             try
             {
-                return Directory.EnumerateDirectories(path).ToList();
+                return Directory.GetDirectories(path).ToList();
             }
             catch (IOException)
             {
-                return Array.Empty<string>();
+                return new string[0];
             }
             catch (UnauthorizedAccessException)
             {
-                return Array.Empty<string>();
+                return new string[0];
             }
         }
 
         private static string Combine(string first, params string[] rest)
         {
-            if (string.IsNullOrWhiteSpace(first)) return null;
+            if (IsBlank(first)) return null;
             var path = first;
             foreach (var part in rest) path = Path.Combine(path, part);
             return path;
@@ -213,7 +211,7 @@ namespace ScamWYF.Setup
 
         private static string Normalize(string path)
         {
-            if (string.IsNullOrWhiteSpace(path)) return path;
+            if (IsBlank(path)) return path;
             try
             {
                 return Path.GetFullPath(path);
@@ -224,19 +222,32 @@ namespace ScamWYF.Setup
             }
         }
 
-        /// <summary>Resolves a symlink to its real folder, so two spellings of one Steam collapse.</summary>
+        /// <summary>Resolves a symlink when the runtime exposes that API; otherwise returns the full path.</summary>
         private static string Canonicalize(string path)
         {
             try
             {
                 var info = new DirectoryInfo(path);
-                var target = info.ResolveLinkTarget(true);
+                // ResolveLinkTarget is unavailable on .NET 3.5.
+                var resolveLinkTarget = typeof(DirectoryInfo).GetMethod("ResolveLinkTarget", new[] { typeof(bool) });
+                if (resolveLinkTarget == null) return info.FullName;
+                var target = resolveLinkTarget.Invoke(info, new object[] { true }) as FileSystemInfo;
                 return (target ?? info).FullName;
             }
             catch (Exception)
             {
                 return path;
             }
+        }
+
+        private static bool IsBlank(string value)
+        {
+            return string.IsNullOrEmpty(value) || value.Trim().Length == 0;
+        }
+
+        private static bool IsWindows
+        {
+            get { return Path.DirectorySeparatorChar == '\\'; }
         }
     }
 }

@@ -110,10 +110,10 @@ namespace ScamWYF.Setup
             steam = steam ?? SteamEnvironment.Detect();
 
             var expanded = ExpandPath(explicitPath);
-            if (!string.IsNullOrWhiteSpace(expanded)) return new GameInstall(expanded, steam);
+            if (!IsBlank(expanded)) return new GameInstall(expanded, steam);
 
             var environment = ExpandPath(Environment.GetEnvironmentVariable("SWYG_GAME_DIR"));
-            if (!string.IsNullOrWhiteSpace(environment)) return new GameInstall(environment, steam);
+            if (!IsBlank(environment)) return new GameInstall(environment, steam);
 
             var tried = new List<string>();
             foreach (var candidate in Candidates(steam))
@@ -138,7 +138,7 @@ namespace ScamWYF.Setup
 
             var wanted = requireBepInEx ? "Managed and BepInEx\\core" : "Scam With Your Friends_Data/Managed";
             var hints = string.Join(Environment.NewLine + "  ",
-                new[] { install.Path }.Concat(Candidates(steam)).Where(p => !string.IsNullOrWhiteSpace(p)).Distinct());
+                new[] { install.Path }.Concat(Candidates(steam)).Where(p => !IsBlank(p)).Distinct().ToArray());
 
             throw new SetupException(
                 "Could not find the game install (needs " + wanted + ")." + Environment.NewLine +
@@ -156,14 +156,14 @@ namespace ScamWYF.Setup
 
         public IEnumerable<string> ManagedAssemblies()
         {
-            if (!Directory.Exists(ManagedFolder)) return Array.Empty<string>();
+            if (!Directory.Exists(ManagedFolder)) return new string[0];
             try
             {
-                return Directory.EnumerateFiles(ManagedFolder, "*.dll").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
+                return Directory.GetFiles(ManagedFolder, "*.dll").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
             }
             catch (IOException)
             {
-                return Array.Empty<string>();
+                return new string[0];
             }
         }
 
@@ -181,21 +181,22 @@ namespace ScamWYF.Setup
 
             return missing.Count == 0
                 ? "ready"
-                : "needs setup: " + string.Join(", ", missing);
+                : "needs setup: " + string.Join(", ", missing.ToArray());
         }
 
         /// <summary>Expands a leading ~ and makes a path absolute. Returns null for empty input.</summary>
         public static string ExpandPath(string path)
         {
-            if (string.IsNullOrWhiteSpace(path)) return null;
+            if (IsBlank(path)) return null;
             path = path.Trim().Trim('"');
-            if (string.IsNullOrWhiteSpace(path)) return null;
+            if (IsBlank(path)) return null;
 
             if (path == "~" || path.StartsWith("~/", StringComparison.Ordinal) || path.StartsWith("~\\", StringComparison.Ordinal))
             {
-                var home = Environment.GetEnvironmentVariable("HOME")
-                    ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                if (!string.IsNullOrWhiteSpace(home))
+                var home = Environment.GetEnvironmentVariable("HOME");
+                if (IsBlank(home)) home = Environment.GetEnvironmentVariable("USERPROFILE");
+                if (IsBlank(home)) home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                if (!IsBlank(home))
                 {
                     path = path.Length == 1 ? home : System.IO.Path.Combine(home, path.Substring(2));
                 }
@@ -209,6 +210,11 @@ namespace ScamWYF.Setup
             {
                 return path;
             }
+        }
+
+        private static bool IsBlank(string value)
+        {
+            return string.IsNullOrEmpty(value) || value.Trim().Length == 0;
         }
     }
 }

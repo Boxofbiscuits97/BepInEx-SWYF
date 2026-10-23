@@ -47,14 +47,18 @@ namespace ScamWYF.Setup.Patching
         public int Run(GameInstall game, IEnumerable<string> assemblies, string overrideDir, ISetupLog log)
         {
             if (game == null) throw new ArgumentNullException(nameof(game));
+            return Run(game.ManagedFolder, assemblies, overrideDir ?? game.OverrideFolder, log);
+        }
+
+        public int Run(string managedFolder, IEnumerable<string> assemblies, string overrideDir, ISetupLog log)
+        {
             log = log ?? NullSetupLog.Instance;
 
             var names = (assemblies ?? DefaultAssemblies).ToList();
-            overrideDir = overrideDir ?? game.OverrideFolder;
 
-            if (!Directory.Exists(game.ManagedFolder))
+            if (!Directory.Exists(managedFolder))
             {
-                throw new SetupException("Not found: " + game.ManagedFolder);
+                throw new SetupException("Not found: " + managedFolder);
             }
 
             Directory.CreateDirectory(overrideDir);
@@ -62,15 +66,15 @@ namespace ScamWYF.Setup.Patching
             var total = 0;
             foreach (var name in names)
             {
-                total += UnstripOne(game, name, overrideDir, log);
+                total += UnstripOne(managedFolder, name, overrideDir, log);
             }
 
             return total;
         }
 
-        private static int UnstripOne(GameInstall game, string name, string overrideDir, ISetupLog log)
+        private static int UnstripOne(string managedFolder, string name, string overrideDir, ISetupLog log)
         {
-            var source = Path.Combine(game.ManagedFolder, name);
+            var source = Path.Combine(managedFolder, name);
             if (!File.Exists(source))
             {
                 log.Warning("skipping " + name + " - not in Managed");

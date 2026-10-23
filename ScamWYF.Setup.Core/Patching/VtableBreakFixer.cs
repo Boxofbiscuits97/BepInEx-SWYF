@@ -4,11 +4,7 @@ using System.IO;
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-#if PRELOADER_PATCH
 using VtableDetails = System.Collections.Generic.IList<string>;
-#else
-using VtableDetails = System.Collections.Generic.IReadOnlyList<string>;
-#endif
 
 namespace ScamWYF.Setup.Patching
 {
@@ -68,12 +64,20 @@ namespace ScamWYF.Setup.Patching
             ISetupLog log)
         {
             if (game == null) throw new ArgumentNullException(nameof(game));
+            return Run(game.ManagedFolder, fix, assemblies, unstripped ?? game.OverrideFolder, log);
+        }
+
+        public VtableBreakResult Run(
+            string managedFolder,
+            bool fix,
+            IEnumerable<string> assemblies,
+            string unstripped,
+            ISetupLog log)
+        {
             log = log ?? NullSetupLog.Instance;
 
-            var managed = game.ManagedFolder;
-            if (!Directory.Exists(managed)) throw new SetupException("Not found: " + managed);
+            if (!Directory.Exists(managedFolder)) throw new SetupException("Not found: " + managedFolder);
 
-            unstripped = unstripped ?? game.OverrideFolder;
             if (!Directory.Exists(unstripped)) throw new SetupException("Not found: " + unstripped);
 
             var only = assemblies == null ? null : new HashSet<string>(assemblies, StringComparer.OrdinalIgnoreCase);
@@ -81,11 +85,11 @@ namespace ScamWYF.Setup.Patching
             // Prefer the override folder's copy of an assembly, since that is what actually loads.
             var resolver = new DefaultAssemblyResolver();
             resolver.AddSearchDirectory(unstripped);
-            resolver.AddSearchDirectory(managed);
+            resolver.AddSearchDirectory(managedFolder);
 
             var readerParameters = new ReaderParameters { AssemblyResolver = resolver };
 
-            var widened = FindWidenedInterfaces(managed, unstripped, readerParameters, log);
+            var widened = FindWidenedInterfaces(managedFolder, unstripped, readerParameters, log);
 
             log.Heading("types that will fail vtable setup");
             if (widened.Count == 0)
@@ -95,7 +99,7 @@ namespace ScamWYF.Setup.Patching
             }
 
             var scan = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var file in Directory.GetFiles(managed, "*.dll")) scan[Path.GetFileName(file)] = file;
+            foreach (var file in Directory.GetFiles(managedFolder, "*.dll")) scan[Path.GetFileName(file)] = file;
             foreach (var file in Directory.GetFiles(unstripped, "*.dll")) scan[Path.GetFileName(file)] = file;
 
             var breakages = 0;
