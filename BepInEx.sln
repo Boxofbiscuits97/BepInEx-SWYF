@@ -30,7 +30,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Solution", "_Solution", "{
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScamWYF.Setup.Core", "ScamWYF.Setup.Core\ScamWYF.Setup.Core.csproj", "{1C0BDF72-1B72-44DD-A549-EAE64609E9C1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SWYF.Preloader", "SWYF.Preloader\SWYF.Preloader.csproj", "{1C0BDF72-1B72-44DD-A549-EAE64609E9C1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

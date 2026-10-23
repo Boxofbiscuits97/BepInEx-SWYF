@@ -13,7 +13,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Utils;
 using MethodAttributes = Mono.Cecil.MethodAttributes;
-using ScamWYF.Setup;
+using SWYF.Preloader;
 
 namespace BepInEx.Preloader
 {

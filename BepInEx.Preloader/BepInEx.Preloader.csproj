@@ -11,7 +11,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\BepInEx\BepInEx.csproj"/>
-        <ProjectReference Include="..\ScamWYF.Setup.Core\ScamWYF.Setup.Core.csproj"/>
+        <ProjectReference Include="..\SWYF.Preloader\SWYF.Preloader.csproj"/>
         <ProjectReference Include="..\submodules\BepInEx.Harmony\HarmonyXInterop\HarmonyXInterop.csproj"/>
     </ItemGroup>
 

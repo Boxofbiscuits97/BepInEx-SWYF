@@ -1,6 +1,6 @@
 using BepInEx.Logging;
 
-namespace ScamWYF.Setup
+namespace SWYF.Preloader
 {
     public static class PreloaderRepairRunner
     {

@@ -6,7 +6,7 @@ using BepInEx.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-namespace ScamWYF.Setup
+namespace SWYF.Preloader
 {
     /// <summary>
     /// Clones <c>UnsafeOnCompleted</c> into <c>OnCompleted</c> for the awaiters that need it.

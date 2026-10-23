@@ -7,7 +7,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using VtableDetails = System.Collections.Generic.IList<string>;
 
-namespace ScamWYF.Setup
+namespace SWYF.Preloader
 {
     /// <summary>What a vtable scan found, and whether a fix pass wrote anything.</summary>
     public sealed class VtableBreakResult
