@@ -138,6 +138,7 @@ Task("MakeDist")
     {
         var distArchDir = distDir + Directory($"{os}_{arch}");
         var bepinDir = distArchDir + Directory("BepInEx");
+        var extralibDir = distArchDir + Directory("SWYF_ExtraLibs");
         var doorstopTargetDir = distArchDir;
         var doorstopOsArchDir = doorstopPath + Directory(os) + Directory(arch);
 
@@ -149,6 +150,9 @@ Task("MakeDist")
         CreateDirectory(bepinDir + Directory("core"));
         CreateDirectory(bepinDir + Directory("plugins"));
         CreateDirectory(bepinDir + Directory("patchers"));
+        CreateDirectory(extralibDir);
+
+        CopyFiles("./extralibs/*.*", extralibDir);
 
         CopyFiles($"./doorstop/{doorstopConfigPattern}", distArchDir);
         if(ensureLf)

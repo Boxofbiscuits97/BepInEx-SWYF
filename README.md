@@ -2,24 +2,16 @@
     <img src="https://avatars2.githubusercontent.com/u/39589027?s=256">
 </p>
 
-# BepInEx
-![Github All Releases](https://img.shields.io/github/downloads/bepinex/bepinex/total.svg)
-![GitHub release](https://img.shields.io/github/release/bepinex/bepinex.svg)
-[![BepInEx Discord](https://user-images.githubusercontent.com/7288322/34429117-c74dbd12-ecb8-11e7-896d-46369cd0de5b.png)](https://discord.gg/MpFEDAg)
-
-Bepis Injector Extensible
+# BepInEx SWYF
+A fork of BepInEx tailored for the game Scam With Your Friends
 
 ---
 
-Unity plugin framework
+**[BepInEx Official Github](https://github.com/BepInEx/BepInEx)**
 
-**[Latest releases](https://github.com/BepInEx/BepInEx/releases)**
+**[SWYF Steam Page](https://store.steampowered.com/app/4954910/)**
 
-**[Bleeding Edge builds](https://builds.bepis.io/projects/bepinex_be)**
-
-**[How to install](https://bepinex.github.io/bepinex_docs/master/articles/user_guide/installation/index.html)**
-
-**[User and developer guides](https://bepinex.github.io/bepinex_docs/master/articles/index.html)**
+**[SWYF Thunderstore Page](https://thunderstore.io/c/scam-with-your-friends/)**
 
 ## Used libraries
 - [NeighTools/UnityDoorstop](https://github.com/NeighTools/UnityDoorstop) - 4.6.0 ([1c3ece1](https://github.com/NeighTools/UnityDoorstop/commit/1c3ece1f1e6c20f4aa74d5402baabf8a0098d282))
@@ -28,7 +20,10 @@ Unity plugin framework
 - [jbevain/cecil](https://github.com/jbevain/cecil) - 0.10.4 ([98ec890](https://github.com/jbevain/cecil/commit/98ec890d44643ad88d573e97be0e120435eda732))
 
 ## Credits
+### BepInEx
 - [Usagirei](https://github.com/Usagirei) - Code for using the console and for assisting with technical support
 - [essu](https://github.com/exdownloader) - Project logo, moral support and lots of misc. help
 - [denikson](https://github.com/denikson) - [UnityDoorstop](https://github.com/NeighTools/UnityDoorstop) for the patchless loader
 - [nn@](https://twitter.com/NnAone2cmg) - Japanese translation of the wiki
+### SWYF Fork
+- [Ras_rap](https://github.com/ras-rap) - [SWYF Setup](https://github.com/swyf-modding/Setup) project which this fork is based on and the extra libs
