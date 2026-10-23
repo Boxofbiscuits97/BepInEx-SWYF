@@ -152,7 +152,7 @@ Task("MakeDist")
         CreateDirectory(bepinDir + Directory("patchers"));
         CreateDirectory(extralibDir);
 
-        CopyFiles("./extralibs/*.*", extralibDir);
+        CopyFiles("./extralibs/*", extralibDir);
 
         CopyFiles($"./doorstop/{doorstopConfigPattern}", distArchDir);
         if(ensureLf)
