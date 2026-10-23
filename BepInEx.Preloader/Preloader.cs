@@ -13,6 +13,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Utils;
 using MethodAttributes = Mono.Cecil.MethodAttributes;
+using ScamWYF.Setup;
 
 namespace BepInEx.Preloader
 {
@@ -94,6 +95,27 @@ namespace BepInEx.Preloader
 					TypeName = "BepInEx.Chainloader"
 				});
 
+				var overrideFolder = Path.Combine(Paths.GameRootPath, "SWYF_ExtraLibs");
+				PreloaderRepairRunner.Run(Paths.ManagedPath, overrideFolder, new DelegateSetupLog((level, message) =>
+				{
+					switch (level)
+					{
+						case SetupLogLevel.Success:
+						case SetupLogLevel.Info:
+							Logger.LogInfo(message);
+							break;
+						case SetupLogLevel.Warning:
+							Logger.LogWarning(message);
+							break;
+						case SetupLogLevel.Error:
+							Logger.LogError(message);
+							break;
+						case SetupLogLevel.Detail:
+							Logger.LogDebug(message);
+							break;
+					}
+				}));
+
 				Logger.Log(LogLevel.Info,
 					$"Loaded 1 patcher method from [BepInEx.Preloader {version}]");
 
@@ -101,7 +123,7 @@ namespace BepInEx.Preloader
 
 				Logger.LogInfo($"{AssemblyPatcher.PatcherPlugins.Count} patcher plugin{(AssemblyPatcher.PatcherPlugins.Count == 1 ? "" : "s")} loaded");
 
-				AssemblyPatcher.PatchAndLoad(Paths.DllSearchPaths);
+				AssemblyPatcher.PatchAndLoad(new[] { overrideFolder }.Concat(Paths.DllSearchPaths).Distinct(StringComparer.InvariantCultureIgnoreCase).ToArray());
 				AssemblyPatcher.DisposePatchers();
 
 				Logger.LogMessage("Preloader finished");
