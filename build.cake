@@ -175,14 +175,14 @@ Task("Pack")
     var commitPrefix = isBleedingEdge ? $"_{currentCommitShort}_" : "_";
 
     Information("Packing BepInEx");
-    ZipCompress(distDir + Directory("win_x86"), distDir + File($"BepInEx_win_x86{commitPrefix}{buildVersion}.zip"));
-    ZipCompress(distDir + Directory("win_x64"), distDir + File($"BepInEx_win_x64{commitPrefix}{buildVersion}.zip"));
-    ZipCompress(distDir + Directory("linux_x86"), distDir + File($"BepInEx_linux_x86{commitPrefix}{buildVersion}.zip"));
-    ZipCompress(distDir + Directory("linux_x64"), distDir + File($"BepInEx_linux_x64{commitPrefix}{buildVersion}.zip"));
-    ZipCompress(distDir + Directory("macos_universal"), distDir + File($"BepInEx_macos_universal{commitPrefix}{buildVersion}.zip"));
+    ZipCompress(distDir + Directory("win_x86"), distDir + File($"BepInEx-SWYF_win_x86{commitPrefix}{buildVersion}.zip"));
+    ZipCompress(distDir + Directory("win_x64"), distDir + File($"BepInEx-SWYF_win_x64{commitPrefix}{buildVersion}.zip"));
+    ZipCompress(distDir + Directory("linux_x86"), distDir + File($"BepInEx-SWYF_linux_x86{commitPrefix}{buildVersion}.zip"));
+    ZipCompress(distDir + Directory("linux_x64"), distDir + File($"BepInEx-SWYF_linux_x64{commitPrefix}{buildVersion}.zip"));
+    ZipCompress(distDir + Directory("macos_universal"), distDir + File($"BepInEx-SWYF_macos_universal{commitPrefix}{buildVersion}.zip"));
 
     Information("Packing BepInEx.Patcher");
-    ZipCompress(distDir + Directory("patcher"), distDir + File($"BepInEx_Patcher{commitPrefix}{buildVersion}.zip"));
+    ZipCompress(distDir + Directory("patcher"), distDir + File($"BepInEx-SWYF_Patcher{commitPrefix}{buildVersion}.zip"));
 
     if(isBleedingEdge) 
     {
@@ -202,19 +202,19 @@ Task("Pack")
                 ["hash"] = currentCommit,
                 ["artifacts"] = new Dictionary<string, object>[] {
                     new Dictionary<string, object> {
-                        ["file"] = $"BepInEx_x64{commitPrefix}{buildVersion}.zip",
+                        ["file"] = $"BepInEx-SWYF_x64{commitPrefix}{buildVersion}.zip",
                         ["description"] = "BepInEx for x64 machines"
                     },
                     new Dictionary<string, object> {
-                        ["file"] = $"BepInEx_x86{commitPrefix}{buildVersion}.zip",
+                        ["file"] = $"BepInEx-SWYF_x86{commitPrefix}{buildVersion}.zip",
                         ["description"] = "BepInEx for x86 machines"
                     },
                     new Dictionary<string, object> {
-                        ["file"] = $"BepInEx_unix{commitPrefix}{buildVersion}.zip",
+                        ["file"] = $"BepInEx-SWYF_unix{commitPrefix}{buildVersion}.zip",
                         ["description"] = "BepInEx for Unix with GCC (Linux, MacOS)"
                     },
                     new Dictionary<string, object> {
-                        ["file"] = $"BepInEx_Patcher{commitPrefix}{buildVersion}.zip",
+                        ["file"] = $"BepInEx-SWYF_Patcher{commitPrefix}{buildVersion}.zip",
                         ["description"] = "Hardpatcher for BepInEx. IMPORTANT: USE ONLY IF DOORSTOP DOES NOT WORK FOR SOME REASON!"
                     }
                 }
