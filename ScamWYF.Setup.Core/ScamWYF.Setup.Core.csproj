@@ -24,6 +24,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BepInEx\BepInEx.csproj" />
     <PackageReference Include="Mono.Cecil" Version="0.10.4" />
   </ItemGroup>
 

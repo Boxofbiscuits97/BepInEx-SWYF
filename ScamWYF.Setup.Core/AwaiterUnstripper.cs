@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BepInEx.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-namespace ScamWYF.Setup.Patching
+namespace ScamWYF.Setup
 {
     /// <summary>
     /// Clones <c>UnsafeOnCompleted</c> into <c>OnCompleted</c> for the awaiters that need it.
@@ -39,26 +40,20 @@ namespace ScamWYF.Setup.Patching
     /// </remarks>
     public sealed class AwaiterUnstripper
     {
+        private static readonly ManualLogSource Log = Logger.CreateLogSource("SWYF.AwaiterUnstripper");
+
         public static readonly string[] DefaultAssemblies = { "UniTask.dll" };
 
         private const string Critical = "System.Runtime.CompilerServices.ICriticalNotifyCompletion";
         private const string Notify = "System.Runtime.CompilerServices.INotifyCompletion";
 
-        public int Run(GameInstall game, IEnumerable<string> assemblies, string overrideDir, ISetupLog log)
+        public int Run(string managedFolder, IEnumerable<string> assemblies, string overrideDir)
         {
-            if (game == null) throw new ArgumentNullException(nameof(game));
-            return Run(game.ManagedFolder, assemblies, overrideDir ?? game.OverrideFolder, log);
-        }
-
-        public int Run(string managedFolder, IEnumerable<string> assemblies, string overrideDir, ISetupLog log)
-        {
-            log = log ?? NullSetupLog.Instance;
-
             var names = (assemblies ?? DefaultAssemblies).ToList();
 
             if (!Directory.Exists(managedFolder))
             {
-                throw new SetupException("Not found: " + managedFolder);
+                throw new DirectoryNotFoundException("Not found: " + managedFolder);
             }
 
             Directory.CreateDirectory(overrideDir);
@@ -66,18 +61,18 @@ namespace ScamWYF.Setup.Patching
             var total = 0;
             foreach (var name in names)
             {
-                total += UnstripOne(managedFolder, name, overrideDir, log);
+                total += UnstripOne(managedFolder, name, overrideDir);
             }
 
             return total;
         }
 
-        private static int UnstripOne(string managedFolder, string name, string overrideDir, ISetupLog log)
+        private static int UnstripOne(string managedFolder, string name, string overrideDir)
         {
             var source = Path.Combine(managedFolder, name);
             if (!File.Exists(source))
             {
-                log.Warning("skipping " + name + " - not in Managed");
+                Log.LogWarning("skipping " + name + " - not in Managed");
                 return 0;
             }
 
@@ -97,13 +92,13 @@ namespace ScamWYF.Setup.Patching
                     var unsafeOnCompleted = type.Methods.FirstOrDefault(m => TakesOneArgument(m, "UnsafeOnCompleted"));
                     if (unsafeOnCompleted == null)
                     {
-                        log.Warning("  " + type.FullName + ": no UnsafeOnCompleted to clone, skipped");
+                        Log.LogWarning("  " + type.FullName + ": no UnsafeOnCompleted to clone, skipped");
                         continue;
                     }
 
                     if (unsafeOnCompleted.Body == null)
                     {
-                        log.Warning("  " + type.FullName + ": UnsafeOnCompleted has no body, skipped");
+                        Log.LogWarning("  " + type.FullName + ": UnsafeOnCompleted has no body, skipped");
                         continue;
                     }
 
@@ -118,19 +113,19 @@ namespace ScamWYF.Setup.Patching
 
                     CloneBody(unsafeOnCompleted, method);
 
-                    log.Success("  + " + type.FullName + "::OnCompleted(Action)");
+                    Log.LogInfo("  + " + type.FullName + "::OnCompleted(Action)");
                     patched++;
                 }
 
                 if (patched == 0)
                 {
-                    log.Warning(name + " - nothing to patch");
+                    Log.LogWarning(name + " - nothing to patch");
                     return 0;
                 }
 
                 var destination = Path.Combine(overrideDir, name);
                 assembly.Write(destination);
-                log.Success(name + " - added " + patched + " method(s), wrote " + destination);
+                Log.LogInfo(name + " - added " + patched + " method(s), wrote " + destination);
                 return patched;
             }
         }
@@ -187,7 +182,7 @@ namespace ScamWYF.Setup.Patching
                 else if (operand is long longInteger) created = il.Create(opcode, longInteger);
                 else if (operand is float single) created = il.Create(opcode, single);
                 else if (operand is double doublePrecision) created = il.Create(opcode, doublePrecision);
-                else throw new SetupException("Unhandled operand type " + operand.GetType().FullName + " in " + source.FullName);
+                else throw new InvalidOperationException("Unhandled operand type " + operand.GetType().FullName + " in " + source.FullName);
 
                 il.Append(created);
                 map[instruction] = created;

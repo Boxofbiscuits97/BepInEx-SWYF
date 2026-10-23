@@ -96,25 +96,7 @@ namespace BepInEx.Preloader
 				});
 
 				var overrideFolder = Path.Combine(Paths.GameRootPath, "SWYF_ExtraLibs");
-				PreloaderRepairRunner.Run(Paths.ManagedPath, overrideFolder, new DelegateSetupLog((level, message) =>
-				{
-					switch (level)
-					{
-						case SetupLogLevel.Success:
-						case SetupLogLevel.Info:
-							Logger.LogInfo(message);
-							break;
-						case SetupLogLevel.Warning:
-							Logger.LogWarning(message);
-							break;
-						case SetupLogLevel.Error:
-							Logger.LogError(message);
-							break;
-						case SetupLogLevel.Detail:
-							Logger.LogDebug(message);
-							break;
-					}
-				}));
+				PreloaderRepairRunner.Run(Paths.ManagedPath, overrideFolder);
 
 				Logger.Log(LogLevel.Info,
 					$"Loaded 1 patcher method from [BepInEx.Preloader {version}]");

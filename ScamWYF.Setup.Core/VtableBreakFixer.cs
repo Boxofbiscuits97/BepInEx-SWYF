@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BepInEx.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using VtableDetails = System.Collections.Generic.IList<string>;
 
-namespace ScamWYF.Setup.Patching
+namespace ScamWYF.Setup
 {
     /// <summary>What a vtable scan found, and whether a fix pass wrote anything.</summary>
     public sealed class VtableBreakResult
@@ -54,53 +55,41 @@ namespace ScamWYF.Setup.Patching
     /// </remarks>
     public sealed class VtableBreakFixer
     {
+        private static readonly ManualLogSource Log = Logger.CreateLogSource("SWYF.VtableBreakFixer");
         private static readonly string[] Corlibs = { "mscorlib", "System", "System.Core", "System.Xml", "System.Configuration" };
-
-        public VtableBreakResult Run(
-            GameInstall game,
-            bool fix,
-            IEnumerable<string> assemblies,
-            string unstripped,
-            ISetupLog log)
-        {
-            if (game == null) throw new ArgumentNullException(nameof(game));
-            return Run(game.ManagedFolder, fix, assemblies, unstripped ?? game.OverrideFolder, log);
-        }
 
         public VtableBreakResult Run(
             string managedFolder,
             bool fix,
             IEnumerable<string> assemblies,
-            string unstripped,
-            ISetupLog log)
+            string overrideDir)
         {
-            log = log ?? NullSetupLog.Instance;
+            if (!Directory.Exists(managedFolder)) throw new DirectoryNotFoundException("Not found: " + managedFolder);
 
-            if (!Directory.Exists(managedFolder)) throw new SetupException("Not found: " + managedFolder);
-
-            if (!Directory.Exists(unstripped)) throw new SetupException("Not found: " + unstripped);
+            if (!Directory.Exists(overrideDir)) throw new DirectoryNotFoundException("Not found: " + overrideDir);
 
             var only = assemblies == null ? null : new HashSet<string>(assemblies, StringComparer.OrdinalIgnoreCase);
 
             // Prefer the override folder's copy of an assembly, since that is what actually loads.
             var resolver = new DefaultAssemblyResolver();
-            resolver.AddSearchDirectory(unstripped);
+            resolver.AddSearchDirectory(overrideDir);
             resolver.AddSearchDirectory(managedFolder);
 
             var readerParameters = new ReaderParameters { AssemblyResolver = resolver };
 
-            var widened = FindWidenedInterfaces(managedFolder, unstripped, readerParameters, log);
+            var widened = FindWidenedInterfaces(managedFolder, overrideDir, readerParameters);
 
-            log.Heading("types that will fail vtable setup");
+            Log.LogInfo(string.Empty);
+            Log.LogInfo("=== types that will fail vtable setup ===");
             if (widened.Count == 0)
             {
-                log.Success("No vtable breakages remain.");
+                Log.LogInfo("No vtable breakages remain.");
                 return new VtableBreakResult(0, 0, new string[0]);
             }
 
             var scan = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var file in Directory.GetFiles(managedFolder, "*.dll")) scan[Path.GetFileName(file)] = file;
-            foreach (var file in Directory.GetFiles(unstripped, "*.dll")) scan[Path.GetFileName(file)] = file;
+            foreach (var file in Directory.GetFiles(overrideDir, "*.dll")) scan[Path.GetFileName(file)] = file;
 
             var breakages = 0;
             var patchedAssemblies = 0;
@@ -155,12 +144,12 @@ namespace ScamWYF.Setup.Patching
 
                     if (bad.Count == 0) continue;
 
-                    var origin = scan[name].StartsWith(unstripped, StringComparison.Ordinal) ? "override copy" : "Managed copy";
-                    log.Info(string.Empty);
-                    log.Error("  " + name + "  [" + origin + "]");
+                    var origin = scan[name].StartsWith(overrideDir, StringComparison.Ordinal) ? "override copy" : "Managed copy";
+                    Log.LogInfo(string.Empty);
+                    Log.LogError("  " + name + "  [" + origin + "]");
                     foreach (var line in bad.Distinct().OrderBy(x => x, StringComparer.Ordinal))
                     {
-                        log.Error("      " + line);
+                        Log.LogError("      " + line);
                         details.Add(name + ": " + line);
                     }
 
@@ -171,28 +160,28 @@ namespace ScamWYF.Setup.Patching
 
                     foreach (var pending in todo)
                     {
-                        if (AddThrowingStub(assembly, pending, log)) { }
+                        if (AddThrowingStub(assembly, pending)) { }
                     }
 
-                    var destination = Path.Combine(unstripped, name);
+                    var destination = Path.Combine(overrideDir, name);
                     assembly.Write(destination);
-                    log.Success("      wrote " + destination);
+                    Log.LogInfo("      wrote " + destination);
                     patchedAssemblies++;
                 }
             }
 
-            log.Info(string.Empty);
+            Log.LogInfo(string.Empty);
             if (breakages == 0)
             {
-                log.Success("No vtable breakages remain.");
+                Log.LogInfo("No vtable breakages remain.");
             }
             else if (fix)
             {
-                log.Info("Patched " + patchedAssemblies + " assembly/assemblies. Re-run without --fix to confirm.");
+                Log.LogInfo("Patched " + patchedAssemblies + " assembly/assemblies. Re-run without --fix to confirm.");
             }
             else
             {
-                log.Error(breakages + " breakage(s). Re-run with --fix (optionally --assemblies a.dll,b.dll) to patch them.");
+                Log.LogError(breakages + " breakage(s). Re-run with --fix (optionally --assemblies a.dll,b.dll) to patch them.");
             }
 
             return new VtableBreakResult(breakages, patchedAssemblies, details);
@@ -202,12 +191,12 @@ namespace ScamWYF.Setup.Patching
         private static Dictionary<string, List<string>> FindWidenedInterfaces(
             string managed,
             string unstripped,
-            ReaderParameters readerParameters,
-            ISetupLog log)
+            ReaderParameters readerParameters)
         {
             var widened = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
-            log.Heading("interfaces whose contract widened under the unstripped corlib");
+            Log.LogInfo(string.Empty);
+            Log.LogInfo("=== interfaces whose contract widened under the unstripped corlib ===");
             var any = false;
 
             foreach (var corlib in Corlibs)
@@ -227,7 +216,7 @@ namespace ScamWYF.Setup.Patching
                 {
                     // A corlib that cannot be read is a problem, but it is not this scan's job to
                     // diagnose it, and failing here would hide every other result. Say so and move on.
-                    log.Warning("  could not read " + corlib + ".dll (" + ex.Message + "); skipped");
+                    Log.LogWarning("  could not read " + corlib + ".dll (" + ex.Message + "); skipped");
                     continue;
                 }
 
@@ -243,12 +232,12 @@ namespace ScamWYF.Setup.Patching
 
                     widened[iface] = added;
                     any = true;
-                    log.Warning("  " + iface);
-                    log.Info("      now also requires: " + string.Join(", ", added.ToArray()));
+                    Log.LogWarning("  " + iface);
+                    Log.LogInfo("      now also requires: " + string.Join(", ", added.ToArray()));
                 }
             }
 
-            if (!any) log.Info("  (none)");
+            if (!any) Log.LogInfo("  (none)");
 
             return widened;
         }
@@ -330,7 +319,7 @@ namespace ScamWYF.Setup.Patching
             return false;
         }
 
-        private static bool AddThrowingStub(AssemblyDefinition assembly, PendingMethod pending, ISetupLog log)
+        private static bool AddThrowingStub(AssemblyDefinition assembly, PendingMethod pending)
         {
             var interfaceType = pending.InterfaceType;
             MethodDefinition signature = null;
@@ -351,7 +340,7 @@ namespace ScamWYF.Setup.Patching
 
             if (signature == null)
             {
-                log.Warning("      cannot resolve signature for " + pending.Name + "; skipped");
+                Log.LogWarning("      cannot resolve signature for " + pending.Name + "; skipped");
                 return false;
             }
 
@@ -375,7 +364,7 @@ namespace ScamWYF.Setup.Patching
             var returnType = ImportSubstituted(signature.ReturnType, substitutes, module);
             if (returnType == null)
             {
-                log.Warning("      cannot build signature for " + pending.Name + "; skipped");
+                Log.LogWarning("      cannot build signature for " + pending.Name + "; skipped");
                 return false;
             }
 
@@ -390,7 +379,7 @@ namespace ScamWYF.Setup.Patching
                 var parameterType = ImportSubstituted(parameter.ParameterType, substitutes, module);
                 if (parameterType == null)
                 {
-                    log.Warning("      cannot build parameters for " + pending.Name + "; skipped");
+                    Log.LogWarning("      cannot build parameters for " + pending.Name + "; skipped");
                     return false;
                 }
 
@@ -404,7 +393,7 @@ namespace ScamWYF.Setup.Patching
             method.Body.MaxStackSize = 1;
 
             pending.Type.Methods.Add(method);
-            log.Success("      + " + pending.Type.FullName + "::" + pending.Name + " (throwing stub)");
+            Log.LogInfo("      + " + pending.Type.FullName + "::" + pending.Name + " (throwing stub)");
             return true;
         }
 
