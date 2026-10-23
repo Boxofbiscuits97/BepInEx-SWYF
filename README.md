@@ -3,7 +3,7 @@
 </p>
 
 # BepInEx SWYF
-A fork of BepInEx tailored for the game Scam With Your Friends
+A fork of BepInEx based on the [v5-lts](https://github.com/BepInEx/BepInEx/tree/v5-lts) branch tailored for the game Scam With Your Friends [(see diff)](https://github.com/BepInEx/BepInEx/compare/v5-lts...Boxofbiscuits97:BepInEx-SWYF:master)
 
 ---
 
